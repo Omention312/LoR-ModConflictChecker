@@ -1,0 +1,37 @@
+# ===========================================================================
+# 换行符与二进制处理
+# ===========================================================================
+
+# 默认：让 git 自动判断文本/二进制，文本统一存成 LF
+* text=auto eol=lf
+
+# --- Windows 批处理必须用 CRLF --------------------------------------------
+# .bat 若是 LF 行尾，部分 Windows 版本的 cmd.exe 会在 goto/标签、
+# 以及 if ( ... ) 多行块上解析出错。本项目两个启动脚本都用了这两种写法，
+# 所以强制检出为 CRLF。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# --- 明确标记二进制（避免 diff/合并时被当文本处理）-----------------------
+*.exe   binary
+*.dll   binary
+*.pyd   binary
+*.lib   binary
+*.zip   binary
+*.7z    binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.gif   binary
+*.wav   binary
+*.mp3   binary
+
+# --- 文档：GitHub 上按 Markdown 渲染 --------------------------------------
+*.md text eol=lf
+*.py text eol=lf
+*.pyw text eol=lf
+
+# --- 语言统计：不要在 GitHub 上把本工具标成 Batchfile ---------------------
+# （两个 .bat 只有几十行，但 GitHub linguist 有时会误判整个仓库语言）
+*.bat linguist-vendored=false
