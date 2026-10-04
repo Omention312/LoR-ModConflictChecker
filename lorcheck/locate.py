@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import os
 import re
-import winreg
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
+
+try:                     # Windows 专有；其它平台让模块仍可被导入
+    import winreg
+except ImportError:      # pragma: no cover - 非 Windows
+    winreg = None        # type: ignore[assignment]
 
 from .config import APP_ID
 
@@ -20,25 +24,30 @@ RE_VDF_KV = re.compile(r'"([^"]+)"\s*"([^"]*)"')
 # Steam
 # ---------------------------------------------------------------------------
 def find_steam_root() -> Optional[Path]:
-    """从注册表 + 常见安装位置找 Steam 根目录。"""
+    """从注册表 + 常见安装位置找 Steam 根目录。
+
+    非 Windows 平台没有注册表，直接跳过那一步，只用环境变量和常见目录探测
+    —— 这样 ``lorcheck`` 在 CI 的 Linux 任务里也能正常导入。
+    """
     candidates: List[Path] = []
 
-    for hive, key in (
-        (winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"),
-        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam"),
-        (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Valve\Steam"),
-    ):
-        try:
-            with winreg.OpenKey(hive, key) as k:
-                for value_name in ("SteamPath", "InstallPath"):
-                    try:
-                        v, _ = winreg.QueryValueEx(k, value_name)
-                    except OSError:
-                        continue
-                    if v:
-                        candidates.append(Path(str(v)))
-        except OSError:
-            continue
+    if winreg is not None:
+        for hive, key in (
+            (winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Valve\Steam"),
+        ):
+            try:
+                with winreg.OpenKey(hive, key) as k:
+                    for value_name in ("SteamPath", "InstallPath"):
+                        try:
+                            v, _ = winreg.QueryValueEx(k, value_name)
+                        except OSError:
+                            continue
+                        if v:
+                            candidates.append(Path(str(v)))
+            except OSError:
+                continue
 
     env = os.environ.get("STEAM_PATH") or os.environ.get("STEAM_DIR")
     if env:
