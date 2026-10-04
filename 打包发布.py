@@ -37,7 +37,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 APP_NAME = "LoRModConflictChecker"
 
-EXCLUDE_DIRS = {"__pycache__", "release", "报告"}
+# .git      —— 版本库内部数据，绝不能进发布包
+# .github   —— CI 配置，只对仓库有意义
+# runtime   —— 注意：runtime\ 不在这里排除！它是发布包的核心内容（内置 Python）。
+#              它在 Git 仓库里被 .gitignore 忽略，但打包时要带上。
+EXCLUDE_DIRS = {"__pycache__", "release", "报告", ".git", ".github"}
 # 打包脚本自己是内部工具（里面的泄露特征清单会自匹配），不放进发布包；
 # .gitignore / .gitattributes 只对 Git 仓库有意义，也不进发布包。
 # LICENSE 要进 —— 分发的二进制同样需要附带许可证。
@@ -68,7 +72,10 @@ LEAK_PATTERNS = [
     re.compile(r"[A-Za-z]:\\+[^\s\"']*steamapps"),
     re.compile(r"[A-Za-z]:\\+steam\\+steamapps"),
     re.compile(r"dsh[ _]workplace"),
-    re.compile(r"O" + "mention"),
+    # Windows 用户名（本机是 "Omention"）出现在 LICENSE 版权行里是**正常的**，
+    # 因为公开的 GitHub 句柄就是在它后面接数字。所以只在后面不接字母/数字/
+    # 下划线时才判为泄露；"C:\Users\Omention\" 这类路径由第一条规则兜住。
+    re.compile(r"O" + r"mention(?![\w])"),
 ]
 
 
@@ -142,9 +149,14 @@ def leak_check(root: Path) -> list:
             if p.stat().st_size > 24 * 1024 * 1024:
                 continue
             try:
-                text = p.read_bytes().decode("utf-8", errors="ignore")
+                blob = p.read_bytes()
             except OSError:
                 continue
+            # 二进制文件（含 NUL 字节）跳过：匹配的是文本特征，扫二进制只会
+            # 浪费时间和产生随机误报
+            if b"\x00" in blob[:8192]:
+                continue
+            text = blob.decode("utf-8", errors="ignore")
             for rx in LEAK_PATTERNS:
                 m = rx.search(text)
                 if m:
