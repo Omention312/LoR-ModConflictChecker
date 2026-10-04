@@ -1,5 +1,10 @@
 # 废墟图书馆 Mod 冲突检测器
 
+[![CI](https://github.com/Omention312/LoR-ModConflictChecker/actions/workflows/ci.yml/badge.svg)](https://github.com/Omention312/LoR-ModConflictChecker/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+![废墟图书馆 Mod 冲突检测器](docs/social-preview.png)
+
 针对 **Steam 版《废墟图书馆 / Library of Ruina》**（AppID `1256670`）的 Mod 冲突检查工具，包含三部分：
 
 1. **冲突扫描** —— 自动找到你的游戏、创意工坊 Mod 目录和 `Player.log`，列出会导致崩溃 / 卡死的 Mod 冲突。
@@ -11,6 +16,7 @@
 - 纯本地运行，不联网、不上传任何数据。
 - 免安装 Python：发布了自带精简版 Python 3.12（含 tkinter）的压缩包。
 - 扫描结果可导出 HTML/JSON，排查过程可导出 Markdown。
+- 纯标准库实现，无需 `pip install` 任何东西；CI 在 ubuntu / windows × Python 3.9 / 3.12 上跑自检。
 
 ---
 

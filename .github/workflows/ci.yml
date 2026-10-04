@@ -1,0 +1,67 @@
+name: CI
+
+# 只跑「纯算法」自检：它们是离线、无副作用的，任何机器上都能跑。
+#
+# 注意：测试/测试_GUI.py 不在 CI 里跑 —— 它会启动真实界面并扫描本机
+# 安装的《废墟图书馆》，CI 机器上没有游戏，断言必然失败。
+# 界面测试请在装了游戏的机器上本地运行：
+#     runtime\python.exe 测试\测试_GUI.py
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.9', '3.12']
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: 只依赖标准库，确认没有第三方依赖
+        run: python -c "import sys; print(sys.version); print('stdlib only')"
+
+      - name: 语法检查
+        run: >-
+          python -m compileall -q
+          lorcheck
+          lorcheck_cli.py
+          LoRModChecker.pyw
+          打包发布.py
+          测试
+
+      - name: 导入检查（兜住运行期注解错误）
+        run: >-
+          python -c "import lorcheck, lorcheck.bfsave, lorcheck.bisect,
+          lorcheck.config, lorcheck.engine, lorcheck.journal, lorcheck.locate,
+          lorcheck.report, lorcheck.rules, lorcheck.scan_log,
+          lorcheck.scan_mods; print('imports OK')"
+
+      - name: 二分排查算法自检
+        run: python 测试/测试_二分排查.py
+
+      - name: 症状档案自检
+        run: python 测试/测试_症状档案.py
+
+      - name: 命令行入口可用
+        run: python lorcheck_cli.py --help
